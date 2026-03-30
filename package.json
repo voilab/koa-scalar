@@ -1,0 +1,55 @@
+{
+  "name": "koa-scalar-router",
+  "version": "0.1.0",
+  "description": "Koa router based on Openapi@3 and koa-scalar",
+  "keywords": [
+    "openapi3",
+    "openapi 3",
+    "openapi@3",
+    "koa scalar",
+    "koa router"
+  ],
+  "homepage": "https://www.github.com/voilab/koa-scalar#README.md",
+  "bugs": "https://www.github.com/voilab/koa-scalar/issues",
+  "license": "MIT",
+  "author": "Voilab SNC <opensource@voilab.ch>",
+  "repository": "github:voilab/koa-scalar",
+  "scripts": {
+    "scalar-update": "node scripts/scalar-update.js",
+    "test": "jest --coverage"
+  },
+  "dependencies": {
+    "@scalar/openapi-parser": "^0.25.0",
+    "fastest-validator": "^1.19.1",
+    "koa-tree-router": "^0.13.1",
+    "lodash": "^4.17.21",
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5"
+  },
+  "peerDependencies": {
+    "koa": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "jest": {
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "rootDir": "./src",
+    "roots": [
+      "../tests"
+    ],
+    "transform": {
+      "^.+\\.js$": ["babel-jest", {
+        "presets": [
+          ["@babel/preset-env", { "targets": { "node": "current" } }]
+        ]
+      }]
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@scalar|leven)/)"
+    ]
+  }
+}
