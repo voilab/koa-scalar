@@ -1,6 +1,6 @@
 {
-  "name": "koa-scalar-router",
-  "version": "0.1.0",
+  "name": "@voilab/koa-scalar",
+  "version": "0.1.1",
   "description": "Koa router based on Openapi@3 and koa-scalar",
   "keywords": [
     "openapi3",
