@@ -1,7 +1,7 @@
 const { readFile, readdir } = require('node:fs/promises')
 const { join, resolve } = require('node:path')
 
-const { parse, stringify } = require('yaml')
+const { parse } = require('yaml')
 const { get, set, merge } = require('lodash')
 const { validate } = require('@scalar/openapi-parser')
 
