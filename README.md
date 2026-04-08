@@ -162,7 +162,7 @@ module.exports = {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.49.7`.
+The version shipped with this library is fixed to `api-reference@1.51.0`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -195,6 +195,8 @@ The example below **WILL NOT WORK**.
           type: string
           format: uuid
 ```
+
+There is an open pull request: https://github.com/steambap/koa-tree-router/pull/29
 
 ## FAQ
 
