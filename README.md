@@ -67,7 +67,7 @@ console.log('API available on http://localhost:3000/v1')
 | apiExplorer | `object` | `false` | empty object | Api explorer documentation configuration |
 | apiExplorer.**url** | `string` | `false` | undefined | Path url to documentation |
 | apiExplorer.**rootUrl** | `string` | `false` | undefined | Root path url used for loading api reference js script in some edge cases |
-| apiExplorer.**envWhitelist** | `string[]` | `false | `[]` | Names of env vars, allowed to be replaced in documentation |
+| apiExplorer.**envWhitelist** | `string[]` | `false` | `[]` | Names of env vars, allowed to be replaced in documentation |
 | apiExplorer.**title** | `string` | `false` | undefined | Documentation title |
 | apiExplorer.**lang** | `string` | `false` | undefined | HTML tag language code |
 | apiExplorer.**head** | `string` | `false` | undefined | Custom &lt;head&gt; for documentation (CSS mainly) |
@@ -237,6 +237,15 @@ info:
 
 servers:
   - url: https://www.somesite.net
+```
+
+> You need to whitelist **all** your env vars if you want the replacement to work
+```js
+new Router({
+  apiExplorer: {
+    envWhitelist: ['ENV_VAR', 'ENV_DEFAULT', 'ENV_URL']
+  }
+})
 ```
 
 ### Advanced validation
