@@ -25,6 +25,7 @@ const configValidatorSchema = {
         type: 'object',
         optional: true,
         properties: {
+            envWhitelist: 'string[]|convert|optional',
             url: 'string|convert|trim|nullable:true|optional',
             rootUrl: 'string|convert|trim|nullable:true|optional',
             title: 'string|convert|trim|empty:false|default:Openapi specification',
@@ -178,17 +179,19 @@ module.exports = class Router {
 
         const pathDoc = this.apiExplorer.url
         const localDocDir = join(this.rootDir, '/docs')
+        const whitelist = new Set(this.apiExplorer.envWhitelist || [])
 
         // replace environment vars
         const openapiString = JSON
             .stringify(openapi)
             .replace(/%env\(([^)]+)\)%/g, (match, envKey) => {
                 const [defaultEnv, usedEnv] = envKey.split(':')
-                return process.env[usedEnv || defaultEnv] || ''
+                const key = usedEnv && process.env[usedEnv] ? usedEnv : defaultEnv
+                return whitelist.has(key) ? (process.env[key] || '') : key
             })
 
         // write data to disk to avoid exessive RAM usage
-        const openapiTmpFile = (await mkdtemp(`${tmpdir()}/node-koa-scalar-openapi'`)) + '.json'
+        const openapiTmpFile = (await mkdtemp(`${tmpdir()}/node-koa-scalar-openapi`)) + '.json'
         await writeFile(openapiTmpFile, openapiString)
 
         // manage index.html scalar file
