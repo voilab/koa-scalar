@@ -1,5 +1,6 @@
+const fs = require('node:fs/promises')
 const { join } = require('node:path')
-const { mkdtemp, writeFile, mkdir } = require('node:fs/promises')
+const { mkdtemp, writeFile, readFile, mkdir, readdir } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const KoaTreeRouter = require('koa-tree-router')
 
@@ -24,6 +25,7 @@ const BASE_SPEC = `
 openapi: 3.1.1
 info:
   title: Test
+  description: "Some description with var: %env(KOA_SCALAR_TEST_TITLE)% and default %env(KOA_SCALAR_TEST_DEFAULT:KOA_SCALAR_TEST_EMPTY)%"
   version: 1.0.0
 `
 
@@ -248,13 +250,81 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
     test('replaces env vars in the openapi JSON served by the api explorer', async () => {
         const dir = await createTmpDir()
         await scaffold(dir)
+
+        const before = await readdir(tmpdir())
+
         process.env.KOA_SCALAR_TEST_TITLE = 'MyApp'
-        await expect(new Router({
+        await new Router({
+            ctrlDir: join(dir, 'controllers'),
+            docDir: join(dir, 'openapi'),
+            version: '/v1',
+            apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_TITLE'] }
+        }).build()
+
+        const after = await readdir(tmpdir())
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        expect(newDirs.length).toBeGreaterThan(0)
+
+        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const content = await readFile(jsonFile, 'utf-8')
+
+        expect(content).toContain('MyApp')
+        expect(content).not.toContain('%env(KOA_SCALAR_TEST_TITLE)%')
+
+        delete process.env.KOA_SCALAR_TEST_TITLE
+    })
+
+    test('replaces env vars with default in the openapi JSON served by the api explorer', async () => {
+        const dir = await createTmpDir()
+        await scaffold(dir)
+
+        const before = await readdir(tmpdir())
+
+        process.env.KOA_SCALAR_TEST_DEFAULT = 'MyAppDefault'
+        await new Router({
+            ctrlDir: join(dir, 'controllers'),
+            docDir: join(dir, 'openapi'),
+            version: '/v1',
+            apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT'] }
+        }).build()
+
+        const after = await readdir(tmpdir())
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        expect(newDirs.length).toBeGreaterThan(0)
+
+        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const content = await readFile(jsonFile, 'utf-8')
+
+        expect(content).toContain('MyAppDefault')
+        expect(content).not.toContain('%env(KOA_SCALAR_TEST_DEFAULT:KOA_SCALAR_TEST_EMPTY)%')
+
+        delete process.env.KOA_SCALAR_TEST_DEFAULT
+    })
+
+    test('replaces no env vars in the openapi JSON served by the api explorer, because no whitelist', async () => {
+        const dir = await createTmpDir()
+        await scaffold(dir)
+
+        const before = await readdir(tmpdir())
+
+        process.env.KOA_SCALAR_TEST_TITLE = 'MyApp'
+        await new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
             apiExplorer: { url: '/docs' }
-        }).build()).resolves.toBeUndefined()
+        }).build()
+
+        const after = await readdir(tmpdir())
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        expect(newDirs.length).toBeGreaterThan(0)
+
+        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const content = await readFile(jsonFile, 'utf-8')
+
+        expect(content).toContain('KOA_SCALAR_TEST_TITLE')
+        expect(content).not.toContain('%env(KOA_SCALAR_TEST_TITLE)%')
+
         delete process.env.KOA_SCALAR_TEST_TITLE
     })
 })

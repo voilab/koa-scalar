@@ -216,7 +216,7 @@ module.exports = class Validator {
                         props.type = 'number'
                         props.convert = true
                         setPropsFromFormat(props, props.type, schema.format)
-                        props.integer = props.type === 'integer'
+                        props.integer = type === 'integer'
                         props.min = schema.minimum
                         props.max = schema.maximum
                         break

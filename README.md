@@ -67,6 +67,7 @@ console.log('API available on http://localhost:3000/v1')
 | apiExplorer | `object` | `false` | empty object | Api explorer documentation configuration |
 | apiExplorer.**url** | `string` | `false` | undefined | Path url to documentation |
 | apiExplorer.**rootUrl** | `string` | `false` | undefined | Root path url used for loading api reference js script in some edge cases |
+| apiExplorer.**envWhitelist** | `string[]` | `false | `[]` | Names of env vars, allowed to be replaced in documentation |
 | apiExplorer.**title** | `string` | `false` | undefined | Documentation title |
 | apiExplorer.**lang** | `string` | `false` | undefined | HTML tag language code |
 | apiExplorer.**head** | `string` | `false` | undefined | Custom &lt;head&gt; for documentation (CSS mainly) |
@@ -162,7 +163,7 @@ module.exports = {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.51.0`.
+The version shipped with this library is fixed to `api-reference@1.52.3`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 

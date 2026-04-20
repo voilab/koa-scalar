@@ -553,3 +553,20 @@ describe('Validator — validateOutput()', () => {
         await expect(v.validateOutput(ctx, schema)).rejects.toMatchObject({ code: 'parameterValidationError' })
     })
 })
+
+describe('Validator - error', () => {
+    let v
+    beforeEach(() => { v = new Validator() })
+
+    test('throws ValidatorError with code "generalError" when matchSchema fails for a parameter', () => {
+        // type "binary" is unknown and will cause matchSchema to throw,
+        // which getInputValidatorSchema catches and re-throws as a generalError
+        expect(() => v.getInputValidatorSchema({
+            parameters: [makeParam({ name: 'bad', in: 'query', schema: { type: 'binary' } })]
+        })).toThrow(ValidatorError)
+
+        expect(() => v.getInputValidatorSchema({
+            parameters: [makeParam({ name: 'bad', in: 'query', schema: { type: 'binary' } })]
+        })).toThrow(expect.objectContaining({ code: 'generalError' }))
+    })
+})
