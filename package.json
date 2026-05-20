@@ -1,6 +1,6 @@
 {
   "name": "@voilab/koa-scalar",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Koa router based on Openapi@3 and koa-scalar",
   "keywords": [
     "openapi3",
@@ -29,7 +29,7 @@
     "test": "jest --coverage"
   },
   "dependencies": {
-    "@scalar/openapi-parser": "^0.25.0",
+    "@scalar/openapi-parser": "^0.28.4",
     "fastest-validator": "^1.19.1",
     "koa-tree-router": "^0.13.1",
     "lodash": "^4.17.21",

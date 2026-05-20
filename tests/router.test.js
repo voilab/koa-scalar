@@ -285,7 +285,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
-            apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT'] }
+            apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT', 'KOA_SCALAR_TEST_EMPTY'] }
         }).build()
 
         const after = await readdir(tmpdir())
@@ -297,6 +297,32 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
 
         expect(content).toContain('MyAppDefault')
         expect(content).not.toContain('%env(KOA_SCALAR_TEST_DEFAULT:KOA_SCALAR_TEST_EMPTY)%')
+
+        delete process.env.KOA_SCALAR_TEST_DEFAULT
+    })
+
+    test('replaces no env var when default exists but the main env is not in whitelist', async () => {
+        const dir = await createTmpDir()
+        await scaffold(dir)
+
+        const before = await readdir(tmpdir())
+
+        process.env.KOA_SCALAR_TEST_DEFAULT = 'MyAppDefault'
+        await new Router({
+            ctrlDir: join(dir, 'controllers'),
+            docDir: join(dir, 'openapi'),
+            version: '/v1',
+            apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT'] }
+        }).build()
+
+        const after = await readdir(tmpdir())
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        expect(newDirs.length).toBeGreaterThan(0)
+
+        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const content = await readFile(jsonFile, 'utf-8')
+
+        expect(content).toContain('%env(KOA_SCALAR_TEST_DEFAULT:KOA_SCALAR_TEST_EMPTY)%')
 
         delete process.env.KOA_SCALAR_TEST_DEFAULT
     })
@@ -322,8 +348,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
         const content = await readFile(jsonFile, 'utf-8')
 
-        expect(content).toContain('KOA_SCALAR_TEST_TITLE')
-        expect(content).not.toContain('%env(KOA_SCALAR_TEST_TITLE)%')
+        expect(content).toContain('%env(KOA_SCALAR_TEST_TITLE)%')
 
         delete process.env.KOA_SCALAR_TEST_TITLE
     })
