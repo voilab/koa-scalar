@@ -67,6 +67,15 @@ function loadControllerModule(path, method, ctrlDir) {
     return mod
 }
 
+function escapeHtml(str) {
+    return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
 module.exports = class Router {
 
     constructor(options = {}) {
@@ -186,8 +195,9 @@ module.exports = class Router {
             .stringify(openapi)
             .replace(/%env\(([^)]+)\)%/g, (match, envKey) => {
                 const [defaultEnv, usedEnv] = envKey.split(':')
-                const key = usedEnv && process.env[usedEnv] ? usedEnv : defaultEnv
-                return whitelist.has(key) ? (process.env[key] || '') : key
+                const key = usedEnv || defaultEnv
+                const value = process.env[key] ?? process.env[defaultEnv] ?? ''
+                return whitelist.has(key) ? value : match
             })
 
         // write data to disk to avoid exessive RAM usage
@@ -199,11 +209,16 @@ module.exports = class Router {
             .toString()
             .replace(/\{lang\}|\{title\}|<!-- \{head\} -->|\{path\}|\/\/ \{config\},/g, match => {
                 switch (match) {
-                    case '{lang}': return this.apiExplorer.lang
-                    case '{title}': return this.apiExplorer.title
-                    case '<!-- {head} -->': return this.apiExplorer.head || ''
-                    case '{path}': return (this.apiExplorer.rootUrl || '') + pathDoc
-                    case '// {config},': return `...${JSON.stringify(this.apiExplorer.config || {})},`
+                    case '{lang}': {
+                        if (this.apiExplorer.lang && !/^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{1,8})*$/.test(this.apiExplorer.lang)) {
+                            throw new RouterError('Invalid lang tag', 'configValidationError')
+                        }
+                        return this.apiExplorer.lang
+                    }
+                    case '{title}': return escapeHtml(this.apiExplorer.title)
+                    case '<!-- {head} -->': return (this.apiExplorer.head || '').replace(/<\/head>/gi, '<\\/head>')
+                    case '{path}': return escapeHtml((this.apiExplorer.rootUrl || '') + pathDoc)
+                    case '// {config},': return `...${JSON.stringify(this.apiExplorer.config || {}).replace(/<\/script>/gi, '<\\/script>')},`
                     default:
                         return match // fallback (should not be reached)
                 }

@@ -58,22 +58,22 @@ console.log('API available on http://localhost:3000/v1')
 
 | Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| docDir | `string` | `true` || Relative or absolute path to Openapi specification files |
-| ctrlDir | `string` | `true` || Relative or absolute path to javascript controller files |
-| version | `string` | `true` || API version name |
-| parseInput | `boolean` | `false` | `true` | Parse arrays and objects input parameters when they are defined as strings |
-| validateInput | `boolean` | `false` | `true` | Validate input against Openapi definition before controller is called |
-| validateOutput | `boolean` | `false` | `false` | Validate Koa body content against Openapi response definition  |
-| apiExplorer | `object` | `false` | empty object | Api explorer documentation configuration |
-| apiExplorer.**url** | `string` | `false` | undefined | Path url to documentation |
-| apiExplorer.**rootUrl** | `string` | `false` | undefined | Root path url used for loading api reference js script in some edge cases |
-| apiExplorer.**envWhitelist** | `string[]` | `false` | `[]` | Names of env vars, allowed to be replaced in documentation |
-| apiExplorer.**title** | `string` | `false` | undefined | Documentation title |
-| apiExplorer.**lang** | `string` | `false` | undefined | HTML tag language code |
-| apiExplorer.**head** | `string` | `false` | undefined | Custom &lt;head&gt; for documentation (CSS mainly) |
-| apiExplorer.**config** | `object` | `false` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
-| validatorConfig | `object` | `false` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
-| routerConfig | `object` | `false` | vendor defaults | Custom configuration for (or instance of) `KoaTreeRouter` (documentation on [Github](https://github.com/steambap/koa-tree-router)) |
+| docDir | `string` | `yes` || Relative or absolute path to Openapi specification files |
+| ctrlDir | `string` | `yes` || Relative or absolute path to javascript controller files |
+| version | `string` | `yes` || API version name |
+| parseInput | `boolean` | `no` | `true` | Parse arrays and objects input parameters when they are defined as strings |
+| validateInput | `boolean` | `no` | `true` | Validate input against Openapi definition before controller is called |
+| validateOutput | `boolean` | `no` | `false` | Validate Koa body content against Openapi response definition  |
+| apiExplorer | `object` | `no` | empty object | Api explorer documentation configuration |
+| apiExplorer.**url** | `string` | `no` | undefined | Path url to documentation |
+| apiExplorer.**rootUrl** | `string` | `no` | undefined | Root path url used for loading api reference js script in some edge cases |
+| apiExplorer.**envWhitelist** | `string[]` | `no` | `[]` | Names of env vars, allowed to be replaced in documentation |
+| apiExplorer.**title** | `string` | `no` | undefined | Documentation title |
+| apiExplorer.**lang** | `string` | `no` | undefined | HTML tag language code |
+| apiExplorer.**head** | `string` | `no` | undefined | Custom &lt;head&gt; for documentation (CSS mainly) |
+| apiExplorer.**config** | `object` | `no` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
+| validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
+| routerConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `KoaTreeRouter` (documentation on [Github](https://github.com/steambap/koa-tree-router)) |
 
 ## Controllers folders structure
 
@@ -163,7 +163,7 @@ module.exports = {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.52.3`.
+The version shipped with this library is fixed to `api-reference@1.57.2`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
