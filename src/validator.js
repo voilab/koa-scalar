@@ -85,6 +85,10 @@ module.exports = class Validator {
         this.validator = null
     }
 
+    compile(schema) {
+        return this.validator.compile(schema)
+    }
+
     getInputValidatorSchema(data) {
         const schema = (data.parameters || []).reduce((acc, param) => {
             const paramSchema = (param.content && param.content['application/json']?.schema) || param.schema

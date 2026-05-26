@@ -23,7 +23,6 @@ This is a router for Koa, which parses a local directory of Openapi@3 files (`ya
 | **koa-tree-router** | Main | used for routing in Koa |
 | **lodash** | Secondary | used for simplifing POJO manipulation (through `get`, `set` and `merge` exclusively) |
 | **yaml** | Secondary | used to translate `*.yaml` files to POJO |
-| **jest** | Test | Test suite |
 
 ## Basic usage
 
@@ -64,13 +63,14 @@ console.log('API available on http://localhost:3000/v1')
 | parseInput | `boolean` | `no` | `true` | Parse arrays and objects input parameters when they are defined as strings |
 | validateInput | `boolean` | `no` | `true` | Validate input against Openapi definition before controller is called |
 | validateOutput | `boolean` | `no` | `false` | Validate Koa body content against Openapi response definition  |
-| apiExplorer | `object` | `no` | empty object | Api explorer documentation configuration |
-| apiExplorer.**url** | `string` | `no` | undefined | Path url to documentation |
-| apiExplorer.**rootUrl** | `string` | `no` | undefined | Root path url used for loading api reference js script in some edge cases |
+| apiExplorer | `object` | `no` | `{}` | Api explorer documentation configuration |
+| apiExplorer.**url** | `string` | `no` | `undefined` | Path url to documentation |
+| apiExplorer.**rootUrl** | `string` | `no` | `undefined` | Root path url used for loading api reference js script in some edge cases |
 | apiExplorer.**envWhitelist** | `string[]` | `no` | `[]` | Names of env vars, allowed to be replaced in documentation |
-| apiExplorer.**title** | `string` | `no` | undefined | Documentation title |
-| apiExplorer.**lang** | `string` | `no` | undefined | HTML tag language code |
-| apiExplorer.**head** | `string` | `no` | undefined | Custom &lt;head&gt; for documentation (CSS mainly) |
+| apiExplorer.**title** | `string` | `no` | `undefined` | Documentation title |
+| apiExplorer.**lang** | `string` | `no` | `undefined` | HTML tag language code |
+| apiExplorer.**head** | `string` | `no` | `undefined` | Custom &lt;head&gt; for documentation (CSS mainly) |
+| apiExplorer.**nonce** | `function` | `no` | `undefined` | Function with Koa context as first argument, which returns the nonce |
 | apiExplorer.**config** | `object` | `no` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
 | validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
 | routerConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `KoaTreeRouter` (documentation on [Github](https://github.com/steambap/koa-tree-router)) |
@@ -94,8 +94,11 @@ Where the two files content are:
 openapi: 3.1.1
 info:
   title: Koa router test
+  description: Koa router
 security:
   - bearerAuth: []
+servers:
+  - url: /v1 # server must contain the version number
 
 # ./openapi/paths/users/search.yaml
 /users/search:
@@ -116,7 +119,7 @@ And a router config like that:
 const router = new Router({
     docDir: './openapi',
     ctrlDir: './controllers',
-    version: '/v1'
+    version: 'v1'
 })
 ```
 
@@ -163,7 +166,7 @@ module.exports = {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.57.2`.
+The version shipped with this library is fixed to `api-reference@1.57.5`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -198,6 +201,24 @@ The example below **WILL NOT WORK**.
 ```
 
 There is an open pull request: https://github.com/steambap/koa-tree-router/pull/29
+
+### CSP
+
+If you have CSP enabled, you must accept inline stylesheets, since Scalar imports dynamically (and without nonce)
+the Tailwind CSS.
+
+For the inline javascript of the HTML index file, you can pass the nonce at config time:
+
+```js
+const router = new Router({
+    docDir: './openapi',
+    ctrlDir: './controllers',
+    version: 'v1',
+    apiExplorer: {
+      nonce: koaCtx => koaCtx.state.myNonce // use any system you want to generate the nonce
+    }
+})
+```
 
 ## FAQ
 
