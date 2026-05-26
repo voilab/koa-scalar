@@ -1,6 +1,6 @@
 const { readFile, writeFile, mkdtemp } = require('node:fs/promises')
 const { createReadStream } = require('node:fs')
-const { join, resolve } = require('node:path')
+const { join, resolve, sep } = require('node:path')
 const { tmpdir } = require('node:os')
 
 const KoaTreeRouter = require('koa-tree-router')
@@ -31,6 +31,7 @@ const configValidatorSchema = {
             title: 'string|convert|trim|empty:false|default:Openapi specification',
             lang: 'string|convert|trim|empty:false|default:en',
             head: 'string|convert|nullable:true|optional',
+            nonce: 'function|optional',
             config: 'object|optional'
         }
     }
@@ -38,7 +39,10 @@ const configValidatorSchema = {
 
 function loadSecurityModules(schema, ctrlDir) {
     return Object.entries(schema.components?.securitySchemes || {}).reduce((acc, [name, securitySchema]) => {
-        const path = join(ctrlDir, '/security', name)
+        const path = resolve(join(ctrlDir, '/security', name))
+        if (!path.startsWith(ctrlDir + sep)) {
+            throw new RouterError(`Path traversal detected: ${name}`, 'moduleLoadError', { name })
+        }
         let mod
         try {
             mod = require(path)
@@ -54,7 +58,10 @@ function loadSecurityModules(schema, ctrlDir) {
 }
 
 function loadControllerModule(path, method, ctrlDir) {
-    const modulePath = join(ctrlDir, path)
+    const modulePath = resolve(join(ctrlDir, path))
+    if (!modulePath.startsWith(ctrlDir + sep)) {
+        throw new RouterError(`Path traversal detected: ${path}`, 'moduleLoadError', { path })
+    }
     let mod
     try {
         mod = require(modulePath)
@@ -76,12 +83,20 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;')
 }
 
+// little abstraction over router methods used in this lib
+const routerAbstractor = {
+    create : routerConfig => routerConfig instanceof KoaTreeRouter ? routerConfig : new KoaTreeRouter(routerConfig),
+    clean  : router => null,
+    routes : router => router.routes(),
+    on     : (router, method, path, ...args) => router.on(method.toUpperCase(), path, ...args)
+}
+
 module.exports = class Router {
 
     constructor(options = {}) {
         this.validator = new Validator(options.validatorConfig)
 
-        const configValidatorResult = this.validator.validator.compile(configValidatorSchema)(options)
+        const configValidatorResult = this.validator.compile(configValidatorSchema)(options)
         if (configValidatorResult !== true) {
             throw new RouterError('Config validation error', 'configValidationError', configValidatorResult)
         }
@@ -97,9 +112,7 @@ module.exports = class Router {
             routerConfig = {}
         } = options
 
-        this.router = routerConfig instanceof KoaTreeRouter
-            ? routerConfig
-            : new KoaTreeRouter(routerConfig)
+        this.router = routerAbstractor.create(routerConfig)
 
         this.parser = new Parser({ docDir })
         this.ctrlDir = resolve(ctrlDir)
@@ -112,9 +125,10 @@ module.exports = class Router {
     }
 
     clean() {
+        routerAbstractor.clean(this.router)
+        this.router = null
         this.validator.clean()
         this.validator = null
-        this.router = null
         this.parser.clean()
         this.parser = null
         this.apiExplorer = {}
@@ -131,7 +145,7 @@ module.exports = class Router {
         const securitySchemes = loadSecurityModules(schema, this.ctrlDir)
 
         for (let [path, methods] of Object.entries(schema.paths || [])) {
-            path = join(this.version, path)
+            path = join('/', this.version, path)
 
             for (let [method, data] of Object.entries(methods)) {
                 const modulePath = path.replace(/\{(.[^}]*)\}/g, '_$1')
@@ -174,7 +188,7 @@ module.exports = class Router {
                     }
                 })
 
-                this.router.on(method.toUpperCase(), routePath, ...middlewares)
+                routerAbstractor.on(this.router, method, routePath, ...middlewares)
             }
         }
 
@@ -200,8 +214,10 @@ module.exports = class Router {
                 return whitelist.has(key) ? value : match
             })
 
+        const tmpDir = await mkdtemp(`${tmpdir()}/node-koa-scalar-`)
+
         // write data to disk to avoid exessive RAM usage
-        const openapiTmpFile = (await mkdtemp(`${tmpdir()}/node-koa-scalar-openapi`)) + '.json'
+        const openapiTmpFile = join(tmpDir, 'openapi.json')
         await writeFile(openapiTmpFile, openapiString)
 
         // manage index.html scalar file
@@ -225,22 +241,32 @@ module.exports = class Router {
             })
 
         // write data to disk to avoid exessive RAM usage
-        const indexTmpFile = (await mkdtemp(`${tmpdir()}/node-koa-scalar-index-`)) + '.html'
+        const indexTmpFile = join(tmpDir, 'index.html')
         await writeFile(indexTmpFile, index)
 
-        this.router.get(pathDoc, async koaCtx => {
-            const stream = createReadStream(indexTmpFile)
+        routerAbstractor.on(this.router, 'get', pathDoc, async koaCtx => {
+            // add nonce
+            const file = (await readFile(indexTmpFile))
+                .toString()
+                .replace(/\{nonce\}/g, match => {
+                    switch (match) {
+                        case '{nonce}': return this.apiExplorer.nonce ? this.apiExplorer.nonce(koaCtx) : ''
+                        default:
+                            return match // fallback (should not be reached)
+                    }
+                })
+
             koaCtx.set('Content-Type', 'text/html')
-            koaCtx.body = stream
+            koaCtx.body = file
         })
 
-        this.router.get(join(pathDoc, '/api-reference.js'), async koaCtx => {
+        routerAbstractor.on(this.router, 'get', join(pathDoc, '/api-reference.js'), async koaCtx => {
             const stream = createReadStream(join(localDocDir, '/api-reference.js'))
             koaCtx.set('Content-Type', 'text/javascript')
             koaCtx.body = stream
         })
 
-        this.router.get(join(pathDoc, '/api-reference.json'), async koaCtx => {
+        routerAbstractor.on(this.router, 'get', join(pathDoc, '/api-reference.json'), async koaCtx => {
             const stream = createReadStream(openapiTmpFile)
             koaCtx.set('Content-Type', 'application/json')
             koaCtx.body = stream
@@ -248,6 +274,6 @@ module.exports = class Router {
     }
 
     routes() {
-        return this.router.routes()
+        return routerAbstractor.routes(this.router)
     }
 }
