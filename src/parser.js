@@ -134,7 +134,7 @@ module.exports = class Parser {
             const value = source[key]
             if (!value) {
                 // required validation is done in validator validateInput middleware
-                return
+                continue
             }
             if (parameter.content) {
                 if (parameter.content['application/json']) {
