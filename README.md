@@ -237,7 +237,7 @@ Yes, this library has a (very) simple environment vars replacement, working with
 ```sh
 ENV_VAR="test"
 ENV_DEFAULT="default value"
-ENV_URL="https://www.somesite.net"
+ENV_URL="https://www.somesite.net/v1"
 ```
 
 ```yaml
@@ -257,7 +257,7 @@ info:
   description: "Some description: test, default value"
 
 servers:
-  - url: https://www.somesite.net
+  - url: https://www.somesite.net/v1
 ```
 
 > You need to whitelist **all** your env vars if you want the replacement to work
