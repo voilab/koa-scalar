@@ -1,5 +1,5 @@
 const { readFile, writeFile, mkdtemp, readdir } = require('node:fs/promises')
-const { createReadStream } = require('node:fs')
+const { createReadStream, existsSync } = require('node:fs')
 const { join, resolve, sep, basename, extname } = require('node:path')
 const { tmpdir } = require('node:os')
 
@@ -41,6 +41,9 @@ async function loadMiddlewareModules(ctrlDir) {
     const path = resolve(join(ctrlDir, '/middleware'))
     if (!path.startsWith(ctrlDir + sep)) {
         throw new RouterError(`Path traversal detected: ${ctrlDir}`, 'middlewareLoadError', { ctrlDir })
+    }
+    if (!existsSync(path)) {
+        return {}
     }
     const files = await readdir(path, {
         recursive: true,
