@@ -1,6 +1,6 @@
-const { readFile, writeFile, mkdtemp } = require('node:fs/promises')
+const { readFile, writeFile, mkdtemp, readdir } = require('node:fs/promises')
 const { createReadStream } = require('node:fs')
-const { join, resolve, sep } = require('node:path')
+const { join, resolve, sep, basename, extname } = require('node:path')
 const { tmpdir } = require('node:os')
 
 const KoaTreeRouter = require('koa-tree-router')
@@ -37,11 +37,35 @@ const configValidatorSchema = {
     }
 }
 
+async function loadMiddlewareModules(ctrlDir) {
+    const path = resolve(join(ctrlDir, '/middleware'))
+    if (!path.startsWith(ctrlDir + sep)) {
+        throw new RouterError(`Path traversal detected: ${ctrlDir}`, 'middlewareLoadError', { ctrlDir })
+    }
+    const files = await readdir(path, {
+        recursive: true,
+        withFileTypes: true
+    })
+
+    return files.reduce((acc, file) => {
+        if (file.isFile()) {
+            const path = join(file.parentPath, file.name)
+            const name = basename(file.name, extname(file.name))
+            try {
+                acc[name] = require(path)
+            } catch (err) {
+                throw new RouterError(`Unable to load middleware ${path}. Error is: ${err.message}`, 'middlewareLoadError', { path })
+            }
+        }
+        return acc
+    }, {})
+}
+
 function loadSecurityModules(schema, ctrlDir) {
     return Object.entries(schema.components?.securitySchemes || {}).reduce((acc, [name, securitySchema]) => {
         const path = resolve(join(ctrlDir, '/security', name))
         if (!path.startsWith(ctrlDir + sep)) {
-            throw new RouterError(`Path traversal detected: ${name}`, 'moduleLoadError', { name })
+            throw new RouterError(`Path traversal detected: ${name}`, 'securityLoadError', { name })
         }
         let mod
         try {
@@ -143,6 +167,7 @@ module.exports = class Router {
         }
 
         const securitySchemes = loadSecurityModules(schema, this.ctrlDir)
+        const middlewaresModules = await loadMiddlewareModules(this.ctrlDir)
 
         for (let [path, methods] of Object.entries(schema.paths || [])) {
             path = join('/', this.version, path)
@@ -167,6 +192,20 @@ module.exports = class Router {
                             })
                         }
                         middlewares.push(scheme.middleware(options, scheme.schema))
+                    }
+                }
+
+                if (Array.isArray(data['x-middleware'])) {
+                    for (const entry of data['x-middleware']) {
+                        const mw = typeof entry === 'string' ? { name: entry } : entry
+                        if (!middlewaresModules[mw.name]) {
+                            throw new RouterError(`Middleware ${mw.name} not found in /middleware directory`, 'middlewareNotFound', {
+                                name: mw.name,
+                                modulePath,
+                                method
+                            })
+                        }
+                        middlewares.push(middlewaresModules[mw.name](mw.options || {}))
                     }
                 }
 
