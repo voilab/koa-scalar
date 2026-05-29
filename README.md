@@ -110,7 +110,6 @@ servers:
     summary: Search users
     security:
       - bearerAuth: []
-
 ```
 
 And a router config like that:
@@ -127,6 +126,8 @@ Controllers folder will look like this:
 
 ```
 controllers
+|-- middleware
+|   |-- koaBody.js
 |-- security
 |   |-- bearerAuth.js
 |-- v1
@@ -159,7 +160,45 @@ module.exports = {
         ctx.body = await listUsers()
     }
 }
+```
 
+### Middlewares
+
+Middlewares modules are defined in the Openapi file like this. You can either just put
+the name, or an object with name and options (which is itself an object).
+
+```yaml
+/test:
+  get:
+    x-middleware:
+      - name: koaBody
+        options:
+          limit: 50mb
+      - custom
+```
+
+In controller folder structure, middlewares are placed inside `middleware` subfolder (see controller folder
+structure above).
+
+The middleware consists of a function returning a standard koa middleware. The config argument is always an
+object (it cannot be null or undefined).
+
+```js
+// ./controllers/middleware/koaBody.js
+const koaBody = require('koa-body')
+
+module.exports = config => koaBody({
+  includeUnparsed: true,
+  ...config
+})
+
+// ----------------------------------------------
+
+// ./controllers/middleware/custom.js
+module.exports = config => (ctx, next) => {
+  console.log('my custom middleware')
+  return next()
+}
 ```
 
 ## Limitations
