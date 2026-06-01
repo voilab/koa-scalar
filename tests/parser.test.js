@@ -8,7 +8,7 @@ const { ParserError } = require('../src/errors.js')
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function createTmpDir() {
-    return mkdtemp(join(tmpdir(), 'koa-scalar-parser-test-'))
+    return mkdtemp(join(tmpdir(), 'node-test-koa-scalar-parser-test-'))
 }
 
 async function writeFileAt(baseDir, relativePath, content) {

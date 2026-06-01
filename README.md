@@ -34,23 +34,27 @@ const { Router } = require('voilab/koa-scalar')
 const app = new Koa()
 
 const router = new Router({
-    docDir: './openapi',
-    ctrlDir: './controllers',
-    version: '/v1',
-    apiExplorer: {
-        url: '/docs'
-    }
+  docDir: './openapi',
+  ctrlDir: './controllers',
+  version: '/v1',
+  apiExplorer: {
+    url: '/docs'
+  }
 })
 
 // builds routes based on Openapi specification
-await router.build()
+router.build()
+  .then(() => {
+    // add these routes to koa
+    app.use(router.routes())
 
-// add these routes to koa
-app.use(router.routes())
-
-app.listen(3000)
-console.log('Documentation available on http://localhost:3000/docs')
-console.log('API available on http://localhost:3000/v1')
+    app.listen(3000)
+    console.log('Documentation available on http://localhost:3000/docs')
+    console.log('API available on http://localhost:3000/v1')
+  })
+  .catch(err => {
+    console.error(err)
+  })
 ```
 
 ## Configurations
@@ -110,15 +114,17 @@ servers:
     summary: Search users
     security:
       - bearerAuth: []
+    x-middlewares:
+      - custom
 ```
 
 And a router config like that:
 
 ```js
 const router = new Router({
-    docDir: './openapi',
-    ctrlDir: './controllers',
-    version: 'v1'
+  docDir: './openapi',
+  ctrlDir: './controllers',
+  version: 'v1'
 })
 ```
 
@@ -126,8 +132,8 @@ Controllers folder will look like this:
 
 ```
 controllers
-|-- middleware
-|   |-- koaBody.js
+|-- middlewares
+|   |-- custom.js
 |-- security
 |   |-- bearerAuth.js
 |-- v1
@@ -140,8 +146,8 @@ The security module exports a function, itself returning a standard koa middlewa
 ```js
 // ./controllers/security/bearerAuth.js
 module.exports = (options, schema) => (ctx, next) => {
-    console.log('bearer', options, schema, ctx.params)
-    return next()
+  console.log('bearer', options, schema, ctx.params)
+  return next()
 }
 ```
 
@@ -152,13 +158,13 @@ The defined route exports each HTTP lowercased method as a standard koa middlewa
 const { countUsers, listUsers } = require('some/user/service.js')
 
 module.exports = {
-    async head(ctx) {
-        ctx.set('X-Total-Count', await countUsers())
-        ctx.status = 204
-    },
-    async get(ctx) {
-        ctx.body = await listUsers()
-    }
+  async head(ctx) {
+    ctx.set('X-Total-Count', await countUsers())
+    ctx.status = 204
+  },
+  async get(ctx) {
+    ctx.body = await listUsers()
+  }
 }
 ```
 
@@ -170,21 +176,21 @@ the name, or an object with name and options (which is itself an object).
 ```yaml
 /test:
   get:
-    x-middleware:
+    x-middlewares:
       - name: koaBody
         options:
           limit: 50mb
       - custom
 ```
 
-In controller folder structure, middlewares are placed inside `middleware` subfolder (see controller folder
+In controller folder structure, middlewares are placed inside `middlewares` subfolder (see controller folder
 structure above).
 
 The middleware consists of a function returning a standard koa middleware. The config argument is always an
 object (it cannot be null or undefined).
 
 ```js
-// ./controllers/middleware/koaBody.js
+// ./controllers/middlewares/koaBody.js
 const koaBody = require('koa-body')
 
 module.exports = config => koaBody({
@@ -194,7 +200,7 @@ module.exports = config => koaBody({
 
 // ----------------------------------------------
 
-// ./controllers/middleware/custom.js
+// ./controllers/middlewares/custom.js
 module.exports = config => (ctx, next) => {
   console.log('my custom middleware')
   return next()
@@ -250,12 +256,12 @@ For the inline javascript of the HTML index file, you can pass the nonce at conf
 
 ```js
 const router = new Router({
-    docDir: './openapi',
-    ctrlDir: './controllers',
-    version: 'v1',
-    apiExplorer: {
-      nonce: koaCtx => koaCtx.state.myNonce // use any system you want to generate the nonce
-    }
+  docDir: './openapi',
+  ctrlDir: './controllers',
+  version: 'v1',
+  apiExplorer: {
+    nonce: koaCtx => koaCtx.state.myNonce // use any system you want to generate the nonce
+  }
 })
 ```
 

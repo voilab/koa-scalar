@@ -1,14 +1,14 @@
-const { readFile, writeFile, mkdtemp, readdir } = require('node:fs/promises')
+const { readFile, writeFile, mkdtemp } = require('node:fs/promises')
 const { createReadStream, existsSync } = require('node:fs')
 const { join, resolve, sep, basename, extname } = require('node:path')
 const { tmpdir } = require('node:os')
 
-const KoaTreeRouter = require('koa-tree-router')
 const { dereference } = require('@scalar/openapi-parser')
 
 const Validator = require('./validator.js')
 const Parser = require('./parser.js')
 const { RouterError } = require('./errors.js')
+const { escapeHtml, listFiles, routerAbstractor } = require('./utils.js')
 
 const rootDir = __dirname
 
@@ -38,29 +38,24 @@ const configValidatorSchema = {
 }
 
 async function loadMiddlewareModules(ctrlDir) {
-    const path = resolve(join(ctrlDir, '/middleware'))
+    const path = resolve(join(ctrlDir, '/middlewares'))
     if (!path.startsWith(ctrlDir + sep)) {
         throw new RouterError(`Path traversal detected: ${ctrlDir}`, 'middlewareLoadError', { ctrlDir })
     }
     if (!existsSync(path)) {
+        // middlewares are not required
         return {}
     }
-    const files = await readdir(path, {
-        recursive: true,
-        withFileTypes: true
-    })
+    const files = await listFiles(path)
 
     return files.reduce((acc, file) => {
-        if (file.isFile()) {
-            const path = join(file.parentPath, file.name)
-            const name = basename(file.name, extname(file.name))
-            try {
-                acc[name] = require(path)
-            } catch (err) {
-                throw new RouterError(`Unable to load middleware ${path}. Error is: ${err.message}`, 'middlewareLoadError', { path })
-            }
+        try {
+            const name = basename(file, extname(file))
+            acc[name] = require(file)
+            return acc
+        } catch (err) {
+            throw new RouterError(`Unable to load middleware ${file}. Error is: ${err.message}`, 'middlewareLoadError', { path: file })
         }
-        return acc
     }, {})
 }
 
@@ -70,52 +65,29 @@ function loadSecurityModules(schema, ctrlDir) {
         if (!path.startsWith(ctrlDir + sep)) {
             throw new RouterError(`Path traversal detected: ${name}`, 'securityLoadError', { name })
         }
-        let mod
         try {
-            mod = require(path)
+            const mod = require(path)
+            acc[name] = {
+                schema: securitySchema,
+                middleware: mod
+            }
+            return acc
         } catch (err) {
             throw new RouterError(`Unable to load security ${path}. Error is: ${err.message}`, 'securityLoadError', { path })
         }
-        acc[name] = {
-            schema: securitySchema,
-            middleware: mod
-        }
-        return acc
     }, {})
 }
 
-function loadControllerModule(path, method, ctrlDir) {
+function loadControllerModule(path, ctrlDir) {
     const modulePath = resolve(join(ctrlDir, path))
     if (!modulePath.startsWith(ctrlDir + sep)) {
         throw new RouterError(`Path traversal detected: ${path}`, 'moduleLoadError', { path })
     }
-    let mod
     try {
-        mod = require(modulePath)
+        return require(modulePath)
     } catch (err) {
         throw new RouterError(`Unable to load ${modulePath}. Error is: ${err.message}`, 'moduleLoadError', { path })
     }
-    if (!mod[method]) {
-        throw new RouterError(`${modulePath}: Method ${method}() is not implemented!`, 'methodNotFound', { path, method })
-    }
-    return mod
-}
-
-function escapeHtml(str) {
-    return (str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
-}
-
-// little abstraction over router methods used in this lib
-const routerAbstractor = {
-    create : routerConfig => routerConfig instanceof KoaTreeRouter ? routerConfig : new KoaTreeRouter(routerConfig),
-    clean  : router => null,
-    routes : router => router.routes(),
-    on     : (router, method, path, ...args) => router.on(method.toUpperCase(), path, ...args)
 }
 
 module.exports = class Router {
@@ -175,34 +147,39 @@ module.exports = class Router {
         for (let [path, methods] of Object.entries(schema.paths || [])) {
             path = join('/', this.version, path)
 
-            for (let [method, data] of Object.entries(methods)) {
-                const modulePath = path.replace(/\{(.[^}]*)\}/g, '_$1')
-                const routePath = path.replace(/\{(.[^}]*)\}/g, ':$1')
-                method = method.toLowerCase()
+            const modulePath = path.replace(/\{(.[^}]*)\}/g, '_$1')
+            const routePath = routerAbstractor.path(this.router, path)
 
-                const mod = loadControllerModule(modulePath, method, this.ctrlDir)
+            const mod = loadControllerModule(modulePath, this.ctrlDir)
+
+            for (let [method, data] of Object.entries(methods)) {
+                method = method.toLowerCase()
+                if (!mod[method]) {
+                    throw new RouterError(`${modulePath}: Method ${method}() is not implemented!`, 'methodNotFound', { path, method })
+                }
 
                 const middlewares = []
 
-                const securities = data.security || []
-                for (const security of securities) {
-                    for (const [name, options] of Object.entries(security)) {
-                        const scheme = securitySchemes[name]
-                        if (!scheme) {
-                            throw new RouterError(`Security scheme ${name} is not defined in components/securitySchemes`, 'securityNotFound', {
-                                modulePath,
-                                method
-                            })
+                if (Array.isArray(data.security)) {
+                    for (const security of data.security) {
+                        for (const [name, options] of Object.entries(security)) {
+                            const scheme = securitySchemes[name]
+                            if (!scheme) {
+                                throw new RouterError(`Security scheme ${name} is not defined in components/securitySchemes`, 'securityNotFound', {
+                                    modulePath,
+                                    method
+                                })
+                            }
+                            middlewares.push(scheme.middleware(options, scheme.schema))
                         }
-                        middlewares.push(scheme.middleware(options, scheme.schema))
                     }
                 }
 
-                if (Array.isArray(data['x-middleware'])) {
-                    for (const entry of data['x-middleware']) {
+                if (Array.isArray(data['x-middlewares'])) {
+                    for (const entry of data['x-middlewares']) {
                         const mw = typeof entry === 'string' ? { name: entry } : entry
                         if (!middlewaresModules[mw.name]) {
-                            throw new RouterError(`Middleware ${mw.name} not found in /middleware directory`, 'middlewareNotFound', {
+                            throw new RouterError(`Middleware ${mw.name} not found in /middlewares directory`, 'middlewareNotFound', {
                                 name: mw.name,
                                 modulePath,
                                 method
@@ -256,7 +233,7 @@ module.exports = class Router {
                 return whitelist.has(key) ? value : match
             })
 
-        const tmpDir = await mkdtemp(`${tmpdir()}/node-koa-scalar-`)
+        const tmpDir = await mkdtemp(join(tmpdir(), '/node-koa-scalar-'))
 
         // write data to disk to avoid exessive RAM usage
         const openapiTmpFile = join(tmpDir, 'openapi.json')
