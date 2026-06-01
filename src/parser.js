@@ -1,4 +1,4 @@
-const { readFile, readdir } = require('node:fs/promises')
+const { readFile } = require('node:fs/promises')
 const { join, resolve } = require('node:path')
 
 const { parse } = require('yaml')
@@ -6,6 +6,25 @@ const { get, set, merge } = require('lodash')
 const { validate } = require('@scalar/openapi-parser')
 
 const { ParserError } = require('./errors.js')
+const { listFiles, isObject } = require('./utils.js')
+
+const separators = {
+    path: {},
+    query: {
+        form: ',',
+        spaceDelimited: ' ',
+        pipeDelimited: '|',
+        $default: ','
+    },
+    header: {
+        simple: ',',
+        $default: ','
+    },
+    cookie: {
+        form: ',',
+        $default: ','
+    }
+}
 
 function getKoaParameterSource(koaCtx, type) {
     if (type === 'path') {
@@ -21,24 +40,6 @@ function getKoaParameterSource(koaCtx, type) {
         return koaCtx.request.cookies
     }
     throw new ParserError(`Type ${type} unknown in koa context`, 'koaContextNotFound')
-}
-
-async function listFiles(dir, regex) {
-    const files = await readdir(dir, {
-        recursive: true,
-        withFileTypes: true
-    })
-
-    return files.reduce((acc, file) => {
-        if (file.isFile() && file.name.match(regex)) {
-            acc.push(join(file.parentPath, file.name))
-        }
-        return acc
-    }, [])
-}
-
-function isObject(data) {
-    return Object.prototype.toString.call(data) === '[object Object]'
 }
 
 module.exports = class Parser {
@@ -101,24 +102,6 @@ module.exports = class Parser {
         if (!pathSchema.parameters) {
             return
         }
-        const separators = {
-            path: {},
-            query: {
-                form: ',',
-                spaceDelimited: ' ',
-                pipeDelimited: '|',
-                $default: ','
-            },
-            header: {
-                simple: ',',
-                $default: ','
-            },
-            cookie: {
-                form: ',',
-                $default: ','
-            }
-        }
-
         // create real arrays and objects from structured strings
         // koaCtx is mutated if some parameters need transformation
         for (const parameter of pathSchema.parameters) {

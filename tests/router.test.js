@@ -10,7 +10,7 @@ const { RouterError } = require('../src/errors.js')
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function createTmpDir() {
-    return mkdtemp(join(tmpdir(), 'koa-scalar-router-test-'))
+    return mkdtemp(join(tmpdir(), 'node-test-koa-scalar-'))
 }
 
 async function writeFileAt(baseDir, relativePath, content) {
@@ -262,10 +262,10 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         }).build()
 
         const after = await readdir(tmpdir())
-        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-'))
         expect(newDirs.length).toBeGreaterThan(0)
 
-        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const jsonFile = join(tmpdir(), newDirs[0], 'openapi.json')
         const content = await readFile(jsonFile, 'utf-8')
 
         expect(content).toContain('MyApp')
@@ -289,10 +289,10 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         }).build()
 
         const after = await readdir(tmpdir())
-        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar'))
         expect(newDirs.length).toBeGreaterThan(0)
 
-        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const jsonFile = join(tmpdir(), newDirs[0], 'openapi.json')
         const content = await readFile(jsonFile, 'utf-8')
 
         expect(content).toContain('MyAppDefault')
@@ -316,10 +316,10 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         }).build()
 
         const after = await readdir(tmpdir())
-        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar'))
         expect(newDirs.length).toBeGreaterThan(0)
 
-        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const jsonFile = join(tmpdir(), newDirs[0], 'openapi.json')
         const content = await readFile(jsonFile, 'utf-8')
 
         expect(content).toContain('%env(KOA_SCALAR_TEST_DEFAULT:KOA_SCALAR_TEST_EMPTY)%')
@@ -342,10 +342,10 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         }).build()
 
         const after = await readdir(tmpdir())
-        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar-openapi'))
+        const newDirs = after.filter(f => !before.includes(f) && f.startsWith('node-koa-scalar'))
         expect(newDirs.length).toBeGreaterThan(0)
 
-        const jsonFile = join(tmpdir(), newDirs[0]) + '.json'
+        const jsonFile = join(tmpdir(), newDirs[0], 'openapi.json')
         const content = await readFile(jsonFile, 'utf-8')
 
         expect(content).toContain('%env(KOA_SCALAR_TEST_TITLE)%')
