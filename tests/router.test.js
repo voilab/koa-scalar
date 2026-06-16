@@ -91,20 +91,20 @@ describe('Router — constructor', () => {
     })
 
     test('throws RouterError when ctrlDir is an empty string', () => {
-        expect(() => new Router({ ctrlDir: '', docDir: './d', version: '/v1' })).toThrow(RouterError)
+        expect(() => new Router({ ctrlDir: '', docDir: './d', version: '/v1', router: new KoaTreeRouter() })).toThrow(RouterError)
     })
 
     test('throws RouterError when docDir is missing', () => {
-        expect(() => new Router({ ctrlDir: './c', version: '/v1' })).toThrow(RouterError)
+        expect(() => new Router({ ctrlDir: './c', version: '/v1', router: new KoaTreeRouter() })).toThrow(RouterError)
     })
 
     test('throws RouterError when version is missing', () => {
-        expect(() => new Router({ ctrlDir: './c', docDir: './d' })).toThrow(RouterError)
+        expect(() => new Router({ ctrlDir: './c', docDir: './d', router: new KoaTreeRouter() })).toThrow(RouterError)
     })
 
     test('creates a Router instance with valid minimal options', async () => {
         const dir = await createTmpDir()
-        const router = new Router({ ctrlDir: dir, docDir: dir, version: '/v1' })
+        const router = new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: new KoaTreeRouter() })
         expect(router).toBeDefined()
         expect(router.version).toBe('/v1')
     })
@@ -115,7 +115,7 @@ describe('Router — constructor', () => {
         ['validateOutput', false],
     ])('defaults %s to %s', async (key, expected) => {
         const dir = await createTmpDir()
-        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1' })[key]).toBe(expected)
+        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: new KoaTreeRouter() })[key]).toBe(expected)
     })
 
     test.each([
@@ -124,19 +124,13 @@ describe('Router — constructor', () => {
         ['validateOutput', true],
     ])('accepts %s:%s override', async (key, value) => {
         const dir = await createTmpDir()
-        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', [key]: value })[key]).toBe(value)
+        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: new KoaTreeRouter(), [key]: value })[key]).toBe(value)
     })
 
     test('reuses an existing KoaTreeRouter instance when passed as routerConfig', async () => {
         const dir = await createTmpDir()
         const ktr = new KoaTreeRouter()
-        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', routerConfig: ktr }).router).toBe(ktr)
-    })
-
-    test('creates a new KoaTreeRouter when routerConfig is a plain object', async () => {
-        const dir = await createTmpDir()
-        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', routerConfig: {} }).router)
-            .toBeInstanceOf(KoaTreeRouter)
+        expect(new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: ktr }).routerAbstractor.router).toBe(ktr)
     })
 })
 
@@ -145,10 +139,10 @@ describe('Router — constructor', () => {
 describe('Router — clean()', () => {
     test('sets validator, router and parser to null', async () => {
         const dir = await createTmpDir()
-        const router = new Router({ ctrlDir: dir, docDir: dir, version: '/v1' })
+        const router = new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: new KoaTreeRouter() })
         router.clean()
         expect(router.validator).toBeNull()
-        expect(router.router).toBeNull()
+        expect(router.routerAbstractor).toBeNull()
         expect(router.parser).toBeNull()
     })
 })
@@ -158,7 +152,7 @@ describe('Router — clean()', () => {
 describe('Router — routes()', () => {
     test('returns a middleware function', async () => {
         const dir = await createTmpDir()
-        expect(typeof new Router({ ctrlDir: dir, docDir: dir, version: '/v1' }).routes()).toBe('function')
+        expect(typeof new Router({ ctrlDir: dir, docDir: dir, version: '/v1', router: new KoaTreeRouter() }).routes()).toBe('function')
     })
 })
 
@@ -171,7 +165,8 @@ describe('Router — build() — success cases', () => {
         await expect(new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         }).build()).resolves.toBeUndefined()
     })
 
@@ -181,7 +176,8 @@ describe('Router — build() — success cases', () => {
         await expect(new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         }).build()).resolves.toBeUndefined()
     })
 
@@ -196,6 +192,7 @@ describe('Router — build() — success cases', () => {
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             ...options
         }).build()).resolves.toBeUndefined()
     })
@@ -222,7 +219,8 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         await expect(new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         }).build()).resolves.toBeUndefined()
     })
 
@@ -232,7 +230,8 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
         await expect(new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         }).build()).resolves.toBeUndefined()
     })
 
@@ -243,6 +242,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             apiExplorer: { url: '/docs' }
         }).build()).resolves.toBeUndefined()
     })
@@ -258,6 +258,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_TITLE'] }
         }).build()
 
@@ -285,6 +286,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT', 'KOA_SCALAR_TEST_EMPTY'] }
         }).build()
 
@@ -312,6 +314,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             apiExplorer: { url: '/docs', envWhitelist: ['KOA_SCALAR_TEST_DEFAULT'] }
         }).build()
 
@@ -338,6 +341,7 @@ module.exports = { get(ctx) { ctx.body = { id: ctx.params.item_id } } }
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
             version: '/v1',
+            router: new KoaTreeRouter(),
             apiExplorer: { url: '/docs' }
         }).build()
 
@@ -372,7 +376,8 @@ describe('Router — build() — error cases', () => {
         const router = new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         })
         await expect(router.build()).rejects.toThrow(RouterError)
         await expect(router.build()).rejects.toMatchObject({ code: 'moduleLoadError' })
@@ -399,7 +404,8 @@ module.exports = { get(ctx) { ctx.body = {} } }  // only get, not post
         const router = new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         })
         await expect(router.build()).rejects.toThrow(RouterError)
         await expect(router.build()).rejects.toMatchObject({ code: 'methodNotFound' })
@@ -430,7 +436,8 @@ apiKeyHeader:
         const router = new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         })
         await expect(router.build()).rejects.toThrow(RouterError)
         await expect(router.build()).rejects.toMatchObject({ code: 'securityLoadError' })
@@ -460,7 +467,8 @@ bearerAuth:
         const router = new Router({
             ctrlDir: join(dir, 'controllers'),
             docDir: join(dir, 'openapi'),
-            version: '/v1'
+            version: '/v1',
+            router: new KoaTreeRouter()
         })
         await expect(router.build()).rejects.toThrow(RouterError)
         await expect(router.build()).rejects.toMatchObject({ code: 'securityNotFound' })

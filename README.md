@@ -7,6 +7,7 @@ This is a router for Koa, which parses a local directory of Openapi@3 files (`ya
 - [Dependencies](#dependencies)
 - [Basic usage](#basic-usage)
 - [Configurations](#configurations)
+- [Router abstraction](#router-abstraction)
 - [Controllers and folders structure](#controllers-folders-structure)
 - [Limitations](#limitations)
 - [FAQ](#faq)
@@ -18,9 +19,9 @@ This is a router for Koa, which parses a local directory of Openapi@3 files (`ya
 | Dependency | Dependency type | What for? |
 | --- | --- | --- |
 | **koa** | Peer | used as main web framework |
+| **{koa compatible router}** | Peer | used for routing. You can pick the one you want |
 | **@scalar/openapi-parser** | Main | used for Openapi@3 validation, dereferencing, and web client documentation |
 | **fastest-validator** | Main | used for parameters validation |
-| **koa-tree-router** | Main | used for routing in Koa |
 | **lodash** | Secondary | used for simplifing POJO manipulation (through `get`, `set` and `merge` exclusively) |
 | **yaml** | Secondary | used to translate `*.yaml` files to POJO |
 
@@ -29,6 +30,7 @@ This is a router for Koa, which parses a local directory of Openapi@3 files (`ya
 ```js
 // index.js
 const Koa = require('koa')
+const KoaTreeRouter = require('koa-tree-router') // example with KoaTreeRouter
 const { Router } = require('voilab/koa-scalar')
 
 const app = new Koa()
@@ -36,7 +38,8 @@ const app = new Koa()
 const router = new Router({
   docDir: './openapi',
   ctrlDir: './controllers',
-  version: '/v1',
+  version: 'v1',
+  router: new KoaTreeRouter(),
   apiExplorer: {
     url: '/docs'
   }
@@ -64,9 +67,11 @@ router.build()
 | docDir | `string` | `yes` || Relative or absolute path to Openapi specification files |
 | ctrlDir | `string` | `yes` || Relative or absolute path to javascript controller files |
 | version | `string` | `yes` || API version name |
+| router | `object` | `yes*` | `undefined` | Instance of a koa compatible router. Optional if `routerAbstractor` is set |
+| routerAbstractor | `RouterAbstractor` | `yes*` | `undefined` | Class which abstracts all methods used by the router in this lib. Optional if `router` is set |
 | parseInput | `boolean` | `no` | `true` | Parse arrays and objects input parameters when they are defined as strings |
 | validateInput | `boolean` | `no` | `true` | Validate input against Openapi definition before controller is called |
-| validateOutput | `boolean` | `no` | `false` | Validate Koa body content against Openapi response definition  |
+| validateOutput | `boolean` | `no` | `false` | Validate koa body content against Openapi response definition  |
 | apiExplorer | `object` | `no` | `{}` | Api explorer documentation configuration |
 | apiExplorer.**url** | `string` | `no` | `undefined` | Path url to documentation |
 | apiExplorer.**rootUrl** | `string` | `no` | `undefined` | Root path url used for loading api reference js script in some edge cases |
@@ -74,10 +79,57 @@ router.build()
 | apiExplorer.**title** | `string` | `no` | `undefined` | Documentation title |
 | apiExplorer.**lang** | `string` | `no` | `undefined` | HTML tag language code |
 | apiExplorer.**head** | `string` | `no` | `undefined` | Custom &lt;head&gt; for documentation (CSS mainly) |
-| apiExplorer.**nonce** | `function` | `no` | `undefined` | Function with Koa context as first argument, which returns the nonce |
+| apiExplorer.**nonce** | `function` | `no` | `undefined` | Function with koa context as first argument, which returns the nonce |
 | apiExplorer.**config** | `object` | `no` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
 | validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
-| routerConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `KoaTreeRouter` (documentation on [Github](https://github.com/steambap/koa-tree-router)) |
+
+> yes*:  One of `router` or `routerAbstractor` is needed.
+
+## Router abstraction
+
+The routers which have served as a base for this lib were `koa-tree-router` and `@koa/router`. But every method used here are abstracted,
+so you should be able to use any other router available for `koa`.
+
+You can safely use only `router` config if you use one of the tworouters abov. If you have another router, you may want to use the
+`routerAbstractor` config.
+
+### By router config
+
+Use `router` config to just give an instance of your router. If the default abstractor is compatible, you
+don't have to code anything else.
+
+```js
+const KoaTreeRouter = require('koa-tree-router') // example with KoaTreeRouter
+const { Router } = require('voilab/koa-scalar')
+
+const router = new Router({
+  router: new KoaTreeRouter()
+})
+```
+
+### By adapting the abstractor
+
+If your router have different needs, the abstractor will need adjustment, by overriding methods.
+
+```js
+const { Router, RouterAbstractor } = require('voilab/koa-scalar')
+
+class VerySpecialRouterAbstractor extends RouterAbstractor {
+  constructor(router = null) {
+    super(router ?? new VerySpecialRouter())
+  }
+  routes() {
+    return this.router.middleware()  // some routers expose middleware() instead of routes()
+  }
+  path(path) {
+    return path.replace(/\{(.[^}]*)\}/g, '<$1>')  // some routers use <param> instead of :param
+  }
+}
+
+const router = new Router({
+  routerAbstractor: new VerySpecialRouterAbstractor()
+})
+```
 
 ## Controllers folders structure
 
@@ -124,7 +176,8 @@ And a router config like that:
 const router = new Router({
   docDir: './openapi',
   ctrlDir: './controllers',
-  version: 'v1'
+  version: 'v1',
+  router: new KoaTreeRouter()
 })
 ```
 
@@ -211,7 +264,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.57.5`.
+The version shipped with this library is fixed to `api-reference@1.59.3`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -222,32 +275,7 @@ You can use the script `npm run scalar-update` to automatically download the lat
 Openapi@3 lets you configure different content types for requests and responses bodies (`application/json`, `application/xml` and so on).
 Only `application/json` is taken into account regarding validation.
 
-### Mix of static and dynamic routes
-
-Due to how `KoaTreeRouter` works, it's not possible to configure static and dynamic routes on the same base path.
-
-The example below **WILL NOT WORK**.
-
-```yaml
-/users/addresses-types:
-  get:
-    summary: List addresses types (private, professional, etc.)
-
-/users/{user_id}:
-  get:
-    summary: Get user
-    parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-```
-
-There is an open pull request: https://github.com/steambap/koa-tree-router/pull/29
-
-### CSP
+### CSP and API explorer
 
 If you have CSP enabled, you must accept inline stylesheets, since Scalar imports dynamically (and without nonce)
 the Tailwind CSS.
@@ -259,11 +287,14 @@ const router = new Router({
   docDir: './openapi',
   ctrlDir: './controllers',
   version: 'v1',
+  router: new KoaTreeRouter(),
   apiExplorer: {
     nonce: koaCtx => koaCtx.state.myNonce // use any system you want to generate the nonce
   }
 })
 ```
+
+Check [this Scalar issue](https://github.com/scalar/scalar/issues/3973).
 
 ## FAQ
 
@@ -273,7 +304,8 @@ Just leave `apiExplorer.url` empty. This way, no route will point to documentati
 
 ### How can I define a nullable parameter?
 
-In Openapi@3.1, the `type` property can be an array (see the validation [specification](https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-01#name-type)). You can define [Scalar nullable schema property](https://swagger.io/specification/v3/#schema-object) to `true`, or add `null` in type array.
+You can define [Scalar nullable schema property](https://swagger.io/specification/v3/#schema-object) to `true`, or add `null` in type array
+(see [Openapi specification](https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-01#name-type)).
 
 ### Do Openapi files support environment variables?
 
