@@ -5,10 +5,11 @@ const { tmpdir } = require('node:os')
 
 const { dereference } = require('@scalar/openapi-parser')
 
+const RouterAbstractor = require('./abstractor.js')
 const Validator = require('./validator.js')
 const Parser = require('./parser.js')
 const { RouterError } = require('./errors.js')
-const { escapeHtml, listFiles, routerAbstractor } = require('./utils.js')
+const { escapeHtml, listFiles } = require('./utils.js')
 
 const rootDir = __dirname
 
@@ -19,8 +20,13 @@ const configValidatorSchema = {
     parseInput: 'boolean|convert|default:true',
     validateInput: 'boolean|convert|default:true',
     validateOutput: 'boolean|convert|default:false',
-    routerConfig: 'object|optional',
     validatorConfig: 'object|optional',
+    router: 'object|optional',
+    routerAbstractor: {
+        type: 'class',
+        instanceOf: RouterAbstractor,
+        optional: true
+    },
     apiExplorer: {
         type: 'object',
         optional: true,
@@ -107,11 +113,16 @@ module.exports = class Router {
             parseInput,
             validateInput,
             validateOutput,
+            routerAbstractor,
+            router,
             apiExplorer = {},
-            routerConfig = {}
         } = options
 
-        this.router = routerAbstractor.create(routerConfig)
+        if (!router && !routerAbstractor) {
+            throw new RouterError('Either "router" or "routerAbstractor" config must be given', 'configuration', {})
+        }
+
+        this.routerAbstractor = routerAbstractor ?? new RouterAbstractor(router)
 
         this.parser = new Parser({ docDir })
         this.ctrlDir = resolve(ctrlDir)
@@ -124,8 +135,8 @@ module.exports = class Router {
     }
 
     clean() {
-        routerAbstractor.clean(this.router)
-        this.router = null
+        this.routerAbstractor.clean()
+        this.routerAbstractor = null
         this.validator.clean()
         this.validator = null
         this.parser.clean()
@@ -148,7 +159,7 @@ module.exports = class Router {
             path = join('/', this.version, path)
 
             const modulePath = path.replace(/\{(.[^}]*)\}/g, '_$1')
-            const routePath = routerAbstractor.path(this.router, path)
+            const routePath = this.routerAbstractor.path(path)
 
             const mod = loadControllerModule(modulePath, this.ctrlDir)
 
@@ -207,7 +218,7 @@ module.exports = class Router {
                     }
                 })
 
-                routerAbstractor.on(this.router, method, routePath, ...middlewares)
+                this.routerAbstractor.on(method, routePath, ...middlewares)
             }
         }
 
@@ -263,7 +274,7 @@ module.exports = class Router {
         const indexTmpFile = join(tmpDir, 'index.html')
         await writeFile(indexTmpFile, index)
 
-        routerAbstractor.on(this.router, 'get', pathDoc, async koaCtx => {
+        this.routerAbstractor.on('get', pathDoc, async koaCtx => {
             // add nonce
             const file = (await readFile(indexTmpFile))
                 .toString()
@@ -279,13 +290,13 @@ module.exports = class Router {
             koaCtx.body = file
         })
 
-        routerAbstractor.on(this.router, 'get', join(pathDoc, '/api-reference.js'), async koaCtx => {
+        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.js'), async koaCtx => {
             const stream = createReadStream(join(localDocDir, '/api-reference.js'))
             koaCtx.set('Content-Type', 'text/javascript')
             koaCtx.body = stream
         })
 
-        routerAbstractor.on(this.router, 'get', join(pathDoc, '/api-reference.json'), async koaCtx => {
+        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.json'), async koaCtx => {
             const stream = createReadStream(openapiTmpFile)
             koaCtx.set('Content-Type', 'application/json')
             koaCtx.body = stream
@@ -293,6 +304,6 @@ module.exports = class Router {
     }
 
     routes() {
-        return routerAbstractor.routes(this.router)
+        return this.routerAbstractor.routes()
     }
 }
