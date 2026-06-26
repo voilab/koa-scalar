@@ -80,6 +80,7 @@ router.build()
 | apiExplorer.**lang** | `string` | `no` | `undefined` | HTML tag language code |
 | apiExplorer.**head** | `string` | `no` | `undefined` | Custom &lt;head&gt; for documentation (CSS mainly) |
 | apiExplorer.**nonce** | `function` | `no` | `undefined` | Function with koa context as first argument, which returns the nonce |
+| apiExplorer.**hooks** | `string` | `no` | `undefined` | Relative or absolute path to a javascript file (hooks for Scalar config) |
 | apiExplorer.**config** | `object` | `no` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
 | validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
 
@@ -90,7 +91,7 @@ router.build()
 The routers which have served as a base for this lib were `koa-tree-router` and `@koa/router`. But every method used here are abstracted,
 so you should be able to use any other router available for `koa`.
 
-You can safely use only `router` config if you use one of the tworouters abov. If you have another router, you may want to use the
+You can safely use only `router` config if you use one of the two routers above. If you have another router, you may want to use the
 `routerAbstractor` config.
 
 ### By router config
@@ -115,9 +116,6 @@ If your router have different needs, the abstractor will need adjustment, by ove
 const { Router, RouterAbstractor } = require('voilab/koa-scalar')
 
 class VerySpecialRouterAbstractor extends RouterAbstractor {
-  constructor(router = null) {
-    super(router ?? new VerySpecialRouter())
-  }
   routes() {
     return this.router.middleware()  // some routers expose middleware() instead of routes()
   }
@@ -127,7 +125,7 @@ class VerySpecialRouterAbstractor extends RouterAbstractor {
 }
 
 const router = new Router({
-  routerAbstractor: new VerySpecialRouterAbstractor()
+  routerAbstractor: new VerySpecialRouterAbstractor(new VerySpecialRouter())
 })
 ```
 
@@ -264,7 +262,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.59.3`.
+The version shipped with this library is fixed to `api-reference@1.61.0`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -345,6 +343,37 @@ new Router({
   }
 })
 ```
+
+### Is it possible to configure Scalar events (configuration functions)?
+
+Yes, a hook can be defined in `apiExplorer` object. It will load the javascript file as-is, but it
+must be located inside the controllers folder.
+
+```js
+const router = new Router({
+  apiExplorer: {
+    ctrlDir: './controllers',
+    url: '/docs',
+    hooks: 'scalar-hooks.js' // will be located at ./controllers/scalar-hooks.js
+  }
+})
+```
+
+Hook file must set a specific object into `window` browser object. `window.KoaScalarHook` is required and needs
+to be defined as-is.
+
+```js
+window.KoaScalarHook = {
+  config: {
+    onBeforeRequest({ requestBuilder }) {
+      requestBuilder.headers.set('debug', true)
+    },
+    // other Scalar configs
+  }
+}
+```
+
+This config will be merged into `Scalar.createApiReference` used in the end by this lib.
 
 ### Advanced validation
 

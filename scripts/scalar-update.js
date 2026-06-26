@@ -5,6 +5,7 @@ const rootDir = __dirname
 
 const version = 'latest'
 const url = `https://cdn.jsdelivr.net/npm/@scalar/api-reference@${version}`
+const changelog = 'https://scalar.com/resources/changelog/api-reference'
 const file = join(rootDir, '../src/docs/api-reference.js')
 const readmeFile = join(rootDir, '../README.md')
 
@@ -29,7 +30,7 @@ Promise
         }
 
         if (local !== remote) {
-            console.log(`Update available (${localVersion} -> ${remoteVersion})`)
+            console.log(`Update available (${localVersion} -> ${remoteVersion}) (changelog : ${changelog})`)
             console.log(`Write new content in ${file}`)
             await writeFile(file, remote)
 

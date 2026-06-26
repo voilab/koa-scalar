@@ -38,7 +38,8 @@ const configValidatorSchema = {
             lang: 'string|convert|trim|empty:false|default:en',
             head: 'string|convert|nullable:true|optional',
             nonce: 'function|optional',
-            config: 'object|optional'
+            config: 'object|optional',
+            hooks: 'string|optional'
         }
     }
 }
@@ -233,6 +234,8 @@ module.exports = class Router {
         const pathDoc = this.apiExplorer.url
         const localDocDir = join(this.rootDir, '/docs')
         const whitelist = new Set(this.apiExplorer.envWhitelist || [])
+        const hookPath = this.apiExplorer.hooks
+        const hookFilename = 'hooks.js'
 
         // replace environment vars
         const openapiString = JSON
@@ -253,7 +256,7 @@ module.exports = class Router {
         // manage index.html scalar file
         const index = (await readFile(join(localDocDir, 'index.html')))
             .toString()
-            .replace(/\{lang\}|\{title\}|<!-- \{head\} -->|\{path\}|\/\/ \{config\},/g, match => {
+            .replace(/\{lang\}|\{title\}|<!-- \{head\} -->|\{path\}|\/\/ \{config\},|<!-- \{hooks\} -->/g, match => {
                 switch (match) {
                     case '{lang}': {
                         if (this.apiExplorer.lang && !/^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{1,8})*$/.test(this.apiExplorer.lang)) {
@@ -264,7 +267,23 @@ module.exports = class Router {
                     case '{title}': return escapeHtml(this.apiExplorer.title)
                     case '<!-- {head} -->': return (this.apiExplorer.head || '').replace(/<\/head>/gi, '<\\/head>')
                     case '{path}': return escapeHtml((this.apiExplorer.rootUrl || '') + pathDoc)
-                    case '// {config},': return `...${JSON.stringify(this.apiExplorer.config || {}).replace(/<\/script>/gi, '<\\/script>')},`
+                    case '// {config},': {
+                        let config = hookPath
+                            ? ' ...((window.KoaScalarHook && window.KoaScalarHook.config) || {}),'
+                            : ''
+
+                        return config + `...${JSON.stringify(this.apiExplorer.config || {}).replace(/<\/script>/gi, '<\\/script>')},`
+                    }
+                    case '<!-- {hooks} -->': {
+                        if (!hookPath) {
+                            return ''
+                        }
+                        const modulePath = join(this.ctrlDir, hookPath)
+                        if (!modulePath.startsWith(this.ctrlDir + sep)) {
+                            throw new RouterError(`Path traversal detected: ${hookPath}`, 'moduleLoadError', { path: hookPath })
+                        }
+                        return `<script src="${join(pathDoc, hookFilename)}" nonce="{nonce}"></script>`
+                    }
                     default:
                         return match // fallback (should not be reached)
                 }
@@ -301,6 +320,14 @@ module.exports = class Router {
             koaCtx.set('Content-Type', 'application/json')
             koaCtx.body = stream
         })
+
+        if (hookPath) {
+            this.routerAbstractor.on('get', join(pathDoc, hookFilename), async koaCtx => {
+                const stream = createReadStream(join(this.ctrlDir, hookPath))
+                koaCtx.set('Content-Type', 'text/javascript')
+                koaCtx.body = stream
+            })
+        }
     }
 
     routes() {
