@@ -7,6 +7,7 @@ class RouterAbstractor {
         if (!routerInstance) {
             throw new RouterError('Router instance given in the RouterAbstractor constructor must not be null', 'abstractorError', {})
         }
+        this.pathRegexp = /\{(.[^}]*)\}/g
         this.router = routerInstance
     }
 
@@ -33,7 +34,7 @@ class RouterAbstractor {
      * @returns {String}
      */
     path(path) {
-        return path.replace(/\{(.[^}]*)\}/g, ':$1')
+        return path.replace(this.pathRegexp, ':$1')
     }
 
     /**

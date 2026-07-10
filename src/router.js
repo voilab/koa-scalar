@@ -156,10 +156,12 @@ module.exports = class Router {
         const securitySchemes = loadSecurityModules(schema, this.ctrlDir)
         const middlewaresModules = await loadMiddlewareModules(this.ctrlDir)
 
+        const pathRegexp = /\{(.[^}]*)\}/g
+
         for (let [path, methods] of Object.entries(schema.paths || [])) {
             path = join('/', this.version, path)
 
-            const modulePath = path.replace(/\{(.[^}]*)\}/g, '_$1')
+            const modulePath = path.replace(pathRegexp, '_$1')
             const routePath = this.routerAbstractor.path(path)
 
             const mod = loadControllerModule(modulePath, this.ctrlDir)
