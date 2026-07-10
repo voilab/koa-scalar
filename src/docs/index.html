@@ -4,6 +4,7 @@
     <title>{title}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="csp-nonce" content="{nonce}" />
     <!-- {head} -->
   </head>
   <body>
@@ -12,6 +13,9 @@
     <!-- {hooks} -->
     <script nonce="{nonce}">
       Scalar.createApiReference('#app', {
+        localization: {
+          locale: '{lang}'
+        },
         // {config},
         url: '{path}/api-reference.json'
       })

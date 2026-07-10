@@ -72,6 +72,7 @@ router.build()
 | parseInput | `boolean` | `no` | `true` | Parse arrays and objects input parameters when they are defined as strings |
 | validateInput | `boolean` | `no` | `true` | Validate input against Openapi definition before controller is called |
 | validateOutput | `boolean` | `no` | `false` | Validate koa body content against Openapi response definition  |
+| validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
 | apiExplorer | `object` | `no` | `{}` | Api explorer documentation configuration |
 | apiExplorer.**url** | `string` | `no` | `undefined` | Path url to documentation |
 | apiExplorer.**rootUrl** | `string` | `no` | `undefined` | Root path url used for loading api reference js script in some edge cases |
@@ -80,9 +81,8 @@ router.build()
 | apiExplorer.**lang** | `string` | `no` | `undefined` | HTML tag language code |
 | apiExplorer.**head** | `string` | `no` | `undefined` | Custom &lt;head&gt; for documentation (CSS mainly) |
 | apiExplorer.**nonce** | `function` | `no` | `undefined` | Function with koa context as first argument, which returns the nonce |
-| apiExplorer.**hooks** | `string` | `no` | `undefined` | Relative or absolute path to a javascript file (hooks for Scalar config) |
+| apiExplorer.**hooks** | `string` | `no` | `undefined` | Relative path in controllers folder to a javascript file (hooks for Scalar config) |
 | apiExplorer.**config** | `object` | `no` | vendor defaults| Custom configuration for `Scalar` (documentation on [Github](https://github.com/scalar/scalar/blob/main/documentation/configuration.md)) |
-| validatorConfig | `object` | `no` | vendor defaults | Custom configuration for (or instance of) `FastestValidator` (documentation on [Github](https://github.com/icebob/fastest-validator])) |
 
 > yes*:  One of `router` or `routerAbstractor` is needed.
 
@@ -262,7 +262,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.61.0`.
+The version shipped with this library is fixed to `api-reference@1.62.5`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
