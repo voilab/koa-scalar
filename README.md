@@ -120,7 +120,8 @@ class VerySpecialRouterAbstractor extends RouterAbstractor {
     return this.router.middleware()  // some routers expose middleware() instead of routes()
   }
   path(path) {
-    return path.replace(/\{(.[^}]*)\}/g, '<$1>')  // some routers use <param> instead of :param
+    // this.pathRegexp is defined in RouterAbstractor constructor
+    return path.replace(this.pathRegexp, '<$1>')  // some routers use <param> instead of :param
   }
 }
 
@@ -262,7 +263,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.62.5`.
+The version shipped with this library is fixed to `api-reference@1.66.1`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
