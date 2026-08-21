@@ -1,5 +1,5 @@
 const { readFile } = require('node:fs/promises')
-const { join, resolve } = require('node:path')
+const { resolve } = require('node:path')
 
 const { parse } = require('yaml')
 const { get, set, merge } = require('lodash')

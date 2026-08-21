@@ -16,7 +16,9 @@ class RouterAbstractor {
      *
      * @returns {void}
      */
-    clean() {}
+    clean() {
+        this.router = null
+    }
 
     /**
      * Returns koa middleware

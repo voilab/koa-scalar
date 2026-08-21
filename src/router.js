@@ -120,7 +120,7 @@ module.exports = class Router {
         } = options
 
         if (!router && !routerAbstractor) {
-            throw new RouterError('Either "router" or "routerAbstractor" config must be given', 'configuration', {})
+            throw new RouterError('Either "router" or "routerAbstractor" config must be given', 'configValidationError', {})
         }
 
         this.routerAbstractor = routerAbstractor ?? new RouterAbstractor(router)
@@ -311,20 +311,20 @@ module.exports = class Router {
             koaCtx.body = file
         })
 
-        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.js'), async koaCtx => {
+        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.js'), koaCtx => {
             const stream = createReadStream(join(localDocDir, '/api-reference.js'))
             koaCtx.set('Content-Type', 'text/javascript')
             koaCtx.body = stream
         })
 
-        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.json'), async koaCtx => {
+        this.routerAbstractor.on('get', join(pathDoc, '/api-reference.json'), koaCtx => {
             const stream = createReadStream(openapiTmpFile)
             koaCtx.set('Content-Type', 'application/json')
             koaCtx.body = stream
         })
 
         if (hookPath) {
-            this.routerAbstractor.on('get', join(pathDoc, hookFilename), async koaCtx => {
+            this.routerAbstractor.on('get', join(pathDoc, hookFilename), koaCtx => {
                 const stream = createReadStream(join(this.ctrlDir, hookPath))
                 koaCtx.set('Content-Type', 'text/javascript')
                 koaCtx.body = stream
