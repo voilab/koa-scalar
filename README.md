@@ -263,7 +263,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.66.1`.
+The version shipped with this library is fixed to `api-reference@1.70.0`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
