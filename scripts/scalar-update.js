@@ -5,7 +5,7 @@ const rootDir = __dirname
 
 const version = 'latest'
 const url = `https://cdn.jsdelivr.net/npm/@scalar/api-reference@${version}`
-const siteChangelog = 'https://scalar.com/resources/changelog/api-reference'
+const parserChangelog = 'https://github.com/scalar/scalar/blob/main/packages/openapi-parser/CHANGELOG.md';
 const changelog = 'https://github.com/scalar/scalar/blob/main/packages/api-reference/CHANGELOG.md'
 const file = join(rootDir, '../src/docs/api-reference.js')
 const readmeFile = join(rootDir, '../README.md')
