@@ -32,11 +32,11 @@ const configValidatorSchema = {
         optional: true,
         properties: {
             envWhitelist: 'string[]|convert|optional',
-            url: 'string|convert|trim|nullable:true|optional',
-            rootUrl: 'string|convert|trim|nullable:true|optional',
+            url: 'string|convert|trim|optional',
+            rootUrl: 'string|convert|trim|optional',
             title: 'string|convert|trim|empty:false|default:Openapi specification',
             lang: 'string|convert|trim|empty:false|default:en',
-            head: 'string|convert|nullable:true|optional',
+            head: 'string|convert|optional',
             nonce: 'function|optional',
             config: 'object|optional',
             hooks: 'string|optional'
@@ -299,13 +299,7 @@ module.exports = class Router {
             // add nonce
             const file = (await readFile(indexTmpFile))
                 .toString()
-                .replace(/\{nonce\}/g, match => {
-                    switch (match) {
-                        case '{nonce}': return this.apiExplorer.nonce ? this.apiExplorer.nonce(koaCtx) : ''
-                        default:
-                            return match // fallback (should not be reached)
-                    }
-                })
+                .replace(/\{nonce\}/g, this.apiExplorer.nonce ? this.apiExplorer.nonce(koaCtx) : '')
 
             koaCtx.set('Content-Type', 'text/html')
             koaCtx.body = file
