@@ -263,7 +263,7 @@ module.exports = config => (ctx, next) => {
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.73.0`.
+The version shipped with this library is fixed to `api-reference@1.76.3`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -380,6 +380,8 @@ This config will be merged into `Scalar.createApiReference` used in the end by t
 
 This lib uses `FastestValidator` for validation. You can use Openapi schema parameter `format` to use any of the validators available.
 
+#### Shorthand validator options
+
 You must use the [shorthand](https://github.com/icebob/fastest-validator?tab=readme-ov-file#shorthand-definitions) method to add options to the validator.
 
 ```yaml
@@ -392,6 +394,51 @@ name: age
 schema:
   type: integer
   format: positive
+```
+
+#### Custom validator/sanitizer function
+
+You can create your own validator, pass it to FastestValidator, and call it through `x-validator-custom-function` custom property.
+This custom property **does not** override the type. It adds the function for the built-in validator.
+It is called [Custom validation for built-in rules](https://github.com/icebob/fastest-validator#custom-validation-for-built-in-rules).
+
+Define the custom function like this:
+
+```js
+const router = new Router({
+  // ...
+  validatorConfig: {
+    customFunctions: {
+      decodeBase64(value) {
+        const buff = Buffer.from(value || '', 'base64')
+        return buff.toString('utf-8')
+      }
+    }
+  }
+})
+```
+
+Then, in the Openapi documentation, for a parameter in a path, for example:
+
+```yaml
+name: myCustomData
+schema:
+  type: string
+  contentEncoding: base64url
+  x-validator-custom-function: decodeBase64
+  example: dmFsaWRhdG9yQ29uZmln
+```
+
+Then, in the controller:
+
+```js
+module.exports = {
+  async get(ctx) {
+    const decoded = ctx.request.query.myCustomData
+    ctx.body = decoded // prints "validatorConfig"
+  }
+}
+
 ```
 
 ### I don't want to convert value (for arrays, boolean, integer, string, etc)

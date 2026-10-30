@@ -25,7 +25,8 @@ function getStringTypeFromFormat(schema) {
 function setPropsFromFormat(props, type, formatWithOptions) {
     const valids = {
         'array': [
-            'empty', 'contains', 'length', 'convert'
+            'empty', 'contains', 'length', 'convert',
+            'min', 'max', 'unique', 'items'
         ],
         'email': [
             'empty', 'mode', 'normalize'
@@ -34,15 +35,15 @@ function setPropsFromFormat(props, type, formatWithOptions) {
             'value', 'strict'
         ],
         'number': [
-            'equal', 'notEqual', 'positive', 'negative', 'convert'
+            'equal', 'notEqual', 'positive', 'negative', 'convert', 'min', 'max'
         ],
         'object': [
-            'strict'
+            'strict', 'minProps', 'maxProps'
         ],
         'string': [
             'alpha', 'alphanum', 'numeric', 'alphadash', 'contains',
-            'hex', 'singleLine', 'base64', 'empty',
-            'trim', 'trimLeft', 'trimRight', 'length',
+            'hex', 'singleLine', 'integer', 'base64', 'empty', 'min', 'max',
+            'trim', 'trimLeft', 'trimRight', 'length', 'pattern', 'values',
             'padStart', 'padEnd', 'padChar',
             'lowercase', 'uppercase', 'localeLowercase', 'localeUppercase',
             'convert'
@@ -67,7 +68,7 @@ function setPropsFromFormat(props, type, formatWithOptions) {
     const transform = { 'true': true, 'false': false, 'null': null, 'undefined': undefined }
 
     for (const { filter, value } of formats) {
-        if (valid.includes(filter)) {
+        if (valid.includes(filter) || type === 'custom') {
             props[filter] = transform[value] !== undefined ? transform[value] : value
         }
     }
@@ -78,7 +79,10 @@ module.exports = class Validator {
     constructor(config = {}) {
         this.validator = config instanceof FastestValidator
             ? config
-            : new FastestValidator(config)
+            : new FastestValidator({
+                useNewCustomCheckerFunction: true,
+                ...config
+            })
     }
 
     clean() {
@@ -227,6 +231,7 @@ module.exports = class Validator {
                     case 'string':
                         props.type = getStringTypeFromFormat(schema)
                         props.convert = true
+                        props.base64 = schema.contentEncoding === 'base64url' // can be overrided with format
                         setPropsFromFormat(props, props.type, schema.format)
                         props.min = schema.minLength
                         props.max = schema.maxLength
@@ -266,18 +271,27 @@ module.exports = class Validator {
                         props.type = 'forbidden'
                         props.remove = true
                         break
-                    case 'any':
+                    case 'null':
                     case '':
+                    case true:
+                    case false:
                     case null:
                     case undefined:
                         props.type = 'any'
                         break
                     default: {
                         throw new ValidatorError(
-                            `Type ${schema.type} doesn't exists in [matchSchema] method. Use one of [integer, number, string, boolean, array, object, any]`,
+                            `Type ${schema.type} doesn't exists in [matchSchema] method. Use one of [integer, number, string, boolean, array, object, null]`,
                             'schemaTypeMismatch',
                             schema
                         )
+                    }
+                }
+
+                if (schema['x-validator']) {
+                    const validator = (this.validator.customFunctions || {})[schema['x-validator']]
+                    if (validator) {
+                        props.custom = validator
                     }
                 }
 
