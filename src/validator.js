@@ -288,8 +288,8 @@ module.exports = class Validator {
                     }
                 }
 
-                if (schema['x-validator']) {
-                    const validator = (this.validator.customFunctions || {})[schema['x-validator']]
+                if (schema['x-validator-custom-function']) {
+                    const validator = (this.validator.customFunctions || {})[schema['x-validator-custom-function']]
                     if (validator) {
                         props.custom = validator
                     }
