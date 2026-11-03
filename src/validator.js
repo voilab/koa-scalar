@@ -68,7 +68,7 @@ function setPropsFromFormat(props, type, formatWithOptions) {
     const transform = { 'true': true, 'false': false, 'null': null, 'undefined': undefined }
 
     for (const { filter, value } of formats) {
-        if (valid.includes(filter) || type === 'custom') {
+        if (valid.includes(filter)) {
             props[filter] = transform[value] !== undefined ? transform[value] : value
         }
     }
@@ -223,19 +223,20 @@ module.exports = class Validator {
                     case 'number':
                         props.type = 'number'
                         props.convert = true
-                        setPropsFromFormat(props, props.type, schema.format)
                         props.integer = type === 'integer'
                         props.min = schema.minimum
                         props.max = schema.maximum
+                        setPropsFromFormat(props, props.type, schema.format)
                         break
                     case 'string':
                         props.type = getStringTypeFromFormat(schema)
                         props.convert = true
-                        props.base64 = schema.contentEncoding === 'base64url' // can be overrided with format
-                        setPropsFromFormat(props, props.type, schema.format)
+                        props.base64 = schema.contentEncoding === 'base64url'
                         props.min = schema.minLength
                         props.max = schema.maxLength
                         props.pattern = schema.pattern
+                        setPropsFromFormat(props, props.type, schema.format)
+                        // overridden by openapi spec
                         props.values = schema.enum?.filter(value => value !== null)
                         break
                     case 'boolean':
@@ -246,17 +247,19 @@ module.exports = class Validator {
                     case 'array':
                         props.type = 'array'
                         props.convert = true
-                        setPropsFromFormat(props, props.type, schema.format)
                         props.min = schema.minItems
                         props.max = schema.maxItems
                         props.unique = schema.uniqueItems
+                        setPropsFromFormat(props, props.type, schema.format)
+                        // overridden by openapi spec
                         props.items = this.matchSchema(schema.items, config)
                         break
                     case 'object':
                         props.type = 'object'
-                        setPropsFromFormat(props, props.type, schema.format)
                         props.minProps = schema.minProperties
                         props.maxProps = schema.maxProperties
+                        setPropsFromFormat(props, props.type, schema.format)
+                        // overridden by openapi spec
                         props.properties = Object
                             .entries(schema.properties || {})
                             .reduce((p, [key, value]) => {
@@ -288,11 +291,17 @@ module.exports = class Validator {
                     }
                 }
 
-                if (schema['x-validator-custom-function']) {
-                    const validator = (this.validator.customFunctions || {})[schema['x-validator-custom-function']]
-                    if (validator) {
-                        props.custom = validator
+                const customFn = schema['x-validator-custom-function']
+                if (customFn) {
+                    const validator = (this.validator.customFunctions || {})[customFn]
+                    if (!validator) {
+                        throw new ValidatorError(
+                            `Type validator custom function ${customFn} is not defined in [validatorConfig]. Please check documentation about advanced validation`,
+                            'validatorConfigError',
+                            schema
+                        )
                     }
+                    props.custom = validator
                 }
 
                 acc.push(props)
