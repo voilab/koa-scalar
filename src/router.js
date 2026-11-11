@@ -156,7 +156,8 @@ module.exports = class Router {
         const securitySchemes = loadSecurityModules(schema, this.ctrlDir)
         const middlewaresModules = await loadMiddlewareModules(this.ctrlDir)
 
-        const pathRegexp = /\{(.[^}]*)\}/g
+        // manage wildcard [*] at beginning of param in path
+        const pathRegexp = /\{\*?([\w-]+)\}/g
 
         for (let [path, methods] of Object.entries(schema.paths || [])) {
             path = join('/', this.version, path)

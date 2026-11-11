@@ -7,7 +7,8 @@ class RouterAbstractor {
         if (!routerInstance) {
             throw new RouterError('Router instance given in the RouterAbstractor constructor must not be null', 'abstractorError', {})
         }
-        this.pathRegexp = /\{(.[^}]*)\}/g
+        this.pathRegexp = /\{([^}]+)\}/g
+        this.nameRegexp = /^[\w-]/
         this.router = routerInstance
     }
 
@@ -36,7 +37,10 @@ class RouterAbstractor {
      * @returns {String}
      */
     path(path) {
-        return path.replace(this.pathRegexp, ':$1')
+        return path.replace(this.pathRegexp, (_, name) => {
+            // if wildcard exists, use it instead of :
+            return this.nameRegexp.test(name) ? `:${name}` : name
+        })
     }
 
     /**

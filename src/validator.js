@@ -74,6 +74,11 @@ function setPropsFromFormat(props, type, formatWithOptions) {
     }
 }
 
+function sanitizeParameterName(name) {
+    // removes custom wildcards from parameter name
+    return (name || '').replace(/[^\w-]/g, '')
+}
+
 module.exports = class Validator {
 
     constructor(config = {}) {
@@ -99,6 +104,7 @@ module.exports = class Validator {
             if (!paramSchema) {
                 return acc
             }
+            const name = sanitizeParameterName(param.name)
             try {
                 if (!acc[param.in]) {
                     acc[param.in] = {
@@ -106,13 +112,13 @@ module.exports = class Validator {
                         properties: {}
                     }
                 }
-                acc[param.in].properties[param.name] = this.matchSchema(paramSchema, {
+                acc[param.in].properties[name] = this.matchSchema(paramSchema, {
                     mode: 'write',
                     required: param.required
                 })
             } catch (err) {
-                throw new ValidatorError(`Error in matchSchema for param [${param.name}]: ${err.message}`, 'generalError', {
-                    key: param.name,
+                throw new ValidatorError(`Error in matchSchema for param [${name}]: ${err.message}`, 'generalError', {
+                    key: name,
                     param,
                     error: err
                 })

@@ -9,6 +9,7 @@ This is a router for Koa, which parses a local directory of Openapi@3 files (`ya
 - [Configurations](#configurations)
 - [Router abstraction](#router-abstraction)
 - [Controllers and folders structure](#controllers-folders-structure)
+- [Environment variables](#environment-variables)
 - [Limitations](#limitations)
 - [FAQ](#faq)
 - [Contribution](#contribution)
@@ -259,11 +260,51 @@ module.exports = config => (ctx, next) => {
 }
 ```
 
+## Environment variables
+
+This library has a (very) simple environment vars replacement, working with both YAML and JSON files. It uses `process.env.*` to find the value.
+
+```sh
+ENV_VAR="test"
+ENV_DEFAULT="default value"
+ENV_URL="https://www.somesite.net/v1"
+```
+
+```yaml
+info:
+  title: "API docs for environment %env(ENV_VAR)%"
+  description: "Some description: %env(ENV_DEFAULT:ENV_VAR)%, %env(ENV_DEFAULT:ENV_VAR_EMPTY)%"
+
+servers:
+  - url: %env(ENV_URL)%
+```
+
+Results in
+
+```yaml
+info:
+  title: "API docs for environment test"
+  description: "Some description: test, default value"
+
+servers:
+  - url: https://www.somesite.net/v1
+```
+
+> You need to whitelist **all** your env vars if you want the replacement to work
+
+```js
+new Router({
+  apiExplorer: {
+    envWhitelist: ['ENV_VAR', 'ENV_DEFAULT', 'ENV_URL']
+  }
+})
+```
+
 ## Limitations
 
 ### Fixed Scalar API reference version
 
-The version shipped with this library is fixed to `api-reference@1.76.4`.
+The version shipped with this library is fixed to `api-reference@1.78.0`.
 
 If you need an other version, you will need to fork this repository and replace the file `/src/docs/api-reference.js`, and maybe `/src/docs/index.html` if this is needed by the new javascript version.
 
@@ -305,45 +346,6 @@ Just leave `apiExplorer.url` empty. This way, no route will point to documentati
 
 You can define [Scalar nullable schema property](https://swagger.io/specification/v3/#schema-object) to `true`, or add `null` in type array
 (see [Openapi specification](https://datatracker.ietf.org/doc/html/draft-bhutton-json-schema-validation-01#name-type)).
-
-### Do Openapi files support environment variables?
-
-Yes, this library has a (very) simple environment vars replacement, working with both YAML and JSON files. It uses `process.env.*` to find the value.
-
-```sh
-ENV_VAR="test"
-ENV_DEFAULT="default value"
-ENV_URL="https://www.somesite.net/v1"
-```
-
-```yaml
-info:
-  title: "API docs for environment %env(ENV_VAR)%"
-  description: "Some description: %env(ENV_DEFAULT:ENV_VAR)%, %env(ENV_DEFAULT:ENV_VAR_EMPTY)%"
-
-servers:
-  - url: %env(ENV_URL)%
-```
-
-Results in
-
-```yaml
-info:
-  title: "API docs for environment test"
-  description: "Some description: test, default value"
-
-servers:
-  - url: https://www.somesite.net/v1
-```
-
-> You need to whitelist **all** your env vars if you want the replacement to work
-```js
-new Router({
-  apiExplorer: {
-    envWhitelist: ['ENV_VAR', 'ENV_DEFAULT', 'ENV_URL']
-  }
-})
-```
 
 ### Is it possible to configure Scalar events (configuration functions)?
 
@@ -460,6 +462,17 @@ schema:
   type: integer
   format: positive|convert:false
 ```
+
+### Is it possible to define a route with any unknown subpaths?
+
+`@koa/router` can handle such cases, with `/myroute/{*path}`.
+
+If you use this specific router, and define the route like above, subpaths will be active and
+`/myroute/test.jpg`, `/myroute/other/sub/route`, etc. will all point to the same controller `myroute/_path.js`.
+
+> Please note that @koa/router `/myroute/{/*path}` definition is not supported.
+>
+> Also note that you need to define the param name in the Openapi spec with the wildcard : `name: "*path"`
 
 ## Contribution
 
